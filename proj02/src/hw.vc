@@ -132,5 +132,9 @@
 -- III. Задания на модули.
 
 -- 13. Чему равно fileTest (в нормальной форме)? Докажите это.
+\func fileTestNF => (8, 8, 13, 55, 18, 21)
+--\func fileTestNFIsCorrect : (fileTestNF = fileTest) = idp
 
 -- 14. Чему равно M5.t''' (в нормальной форме)? Докажите это.
+\func M5NF => ((82, 42, 61, 82, 34, 42, 61, 29), 25, (42, 29))
+--\func M5NFIsCorrect : (M5NF = M5.t''') = idp
