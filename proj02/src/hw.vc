@@ -16,13 +16,13 @@
 
 -- 2. Определите || через if.
 
-\func \infixr 2 || (x y : Bool) : Bool => if x y false
+\func \infixr 2 || (x y : Bool) : Bool => if x y false -- мне кажется это не ||.
 
 -- 3. Определите возведение в степень и факториал для натуральных чисел.
 
 \func \infixr 8 ^ (x y : Nat) : Nat \with
     | x, 0 => 1
-    | x, suc y => (x ^ y) * y
+    | x, suc y => (x ^ y) * y -- мне кажется это не ^.
 
 \func fac (x : Nat) : Nat \with
     | 0 => 1
