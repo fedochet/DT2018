@@ -1,0 +1,187 @@
+\import lect03
+
+-- 1. Докажите ассоциативность ++.
+
+\func \infixr 5 ++ {A : \Type} (xs ys : List A) : List A \elim xs
+  | nil => ys
+  | cons x xs => cons x (xs ++ ys)
+
+\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) \elim xs
+    | nil => idp
+    | cons x xs => pmap (cons x) (++-assoc xs ys zs)
+
+-- 2. На прошлой лекции мы определяли функцию T : Bool -> \Type рекурсивно.
+--    Определите аналогичную функцию индуктивно.
+
+\data T (t : Bool) \elim t
+    | true => tt
+
+-- 3. Напишите функцию lookup, которая принимает список и натуральное число и возвращает элемент по заданому индексу.
+--    В общем случае эту функцию определить невозможно, т.к. индекс может быть больше, чем число элементов в списке.
+--    Поэтому эта функция должна дополнительно еще принимать доказательство того, что индекс находится в допустимых границах, в виде T (n < length xs).
+
+\func \infix 4 < (x y : Nat) : Bool
+  | 0, 0 => false
+  | 0, suc y => true
+  | suc x, 0 => false
+  | suc x, suc y => x < y
+
+\func absurd {A : \Type} (p : T (false)) : A
+
+\func lookup {A : \Type} {n : Nat} (xs : Vec A n) (i : Nat) (p : T (i < n)): A \elim  n, xs, i
+    | 0, _, 0 => absurd p
+    | 0, _, _ => absurd p
+    | suc _, fcons x _, 0 => x
+    | suc _, fcons _ xs, suc i => lookup xs i p
+
+-- 4. Реализуйте аналоги функции replicate для vec и Vec (эта функция создает список заданной длины, состоящий из повторений данного элемента).
+\func replicate {A : \Type} (a : A) (n : Nat) : Vec A n \elim n
+    | 0 => fnil
+    | suc n => fcons a (replicate a n)
+
+\func replicate' {A : \Type} (a : A) (n : Nat) : vec A n \elim n
+    | 0 => ()
+    | suc n => (a, replicate' a n)
+
+-- 5. Реализуйте аналоги функции map для vec и Vec.
+\func map {A B : \Type} {n : Nat} (f : A -> B) (xs : Vec A n) : Vec B n \elim n, xs
+    | 0, _ => fnil
+    | suc n, fcons x xs => fcons (f x) (map f xs)
+
+\func map' {A B : \Type} {n : Nat} (f : A -> B) (xs : vec A n) : vec B n \elim n, xs
+    | 0, _ => ()
+    | suc n, (x, xs) => ((f x), (map' f xs))
+
+-- 6. Реализуйте аналоги функции zipWith для vec и Vec.
+--    Функция должна принимать вектора одинаковой длины.
+\func zipWith {A B C : \Type} {n : Nat} (f : A -> B -> C) (xs : Vec A n) (ys : Vec B n) : Vec C n \elim n, xs, ys
+    | 0, _, _ => fnil
+    | suc n, fcons x xs, fcons y ys => fcons (f x y) (zipWith f xs ys)
+
+\func zipWith' {A B C : \Type} {n : Nat} (f : A -> B -> C) (xs : vec A n) (ys : vec B n) : vec C n \elim n, xs, ys
+    | 0, _, _ => ()
+    | suc n, (x, xs), (y, ys) => ((f x y), (zipWith' f xs ys))
+
+
+-- 7. Реализуйте Fin как рекурсивную функцию.
+\data FNat (A : \Type) | FZero | FSuc (FNat A)
+
+\func fin (n : Nat) : \Type
+    | suc n => FNat (fin n)
+    | 0 => T (false)
+
+\func fin0 : fin 3 => FZero
+\func fin1 : fin 3 => FSuc FZero
+\func fin2 : fin 3 => FSuc (FSuc FZero)
+
+
+-- 8. Функции Fin n → A соответствуют спискам элементов A длины n.
+--    Функция, преобразующая Vec A n в Fin n → A, была реализована на лекции.
+--    Реализуйте обратную функцию.
+
+\func coin {A : \Type} {n : Nat} (f : Fin n -> A) : Vec A n \elim n
+    | 0 => fnil
+    | suc n => fcons (f fzero) (coin (\lam fin => f (fsuc fin)))
+
+-- 9. Определите тип матриц и ряд функций над ними.
+
+\func Mat (A : \Type) (n m : Nat) : \Type => Vec (Vec A m) n
+
+-- диагональная матрица с элементами e на диагонали и z на остальных позициях.
+
+\func diag {A : \Type} (z e : A) (n : Nat) : Mat A n n \elim n
+    | 0 => fnil
+    | suc n => \let
+        | newColumn => fcons e (replicate z n)
+        | smallerMat => (diag z e n)
+        | smallerMatWithAppendedZeroes => map (\lam col => fcons z col) smallerMat
+        \in  fcons (newColumn) smallerMatWithAppendedZeroes
+
+-- транспонирование матриц
+
+\func transpose {A : \Type} {n m : Nat} (M : Mat A n m) : Mat A m n \elim n, m, M
+    | 0, m, _ => replicate fnil m
+    | _, 0, _ => fnil
+    | suc n, suc m, fcons column rest => \let
+        | topRow => map (\lam col => Head col) rest
+        | rest => map (\lam col => Tail col) rest
+        | transposedRest => transpose rest
+        \in zipWith fcons column (fcons topRow transposedRest)
+
+-- сложение матриц
+
+\func matAdd {A : \Type} (add : A -> A -> A) (n m : Nat) (M N : Mat A n m) : Mat A n m \elim n, M, N
+    | suc n, fcons M' M, fcons N' N => fcons (zipWith add N' M') (matAdd add n m M N)
+    | 0, fnil, fnil => fnil
+
+-- умножение матриц
+
+\func reduce {A : \Type} { n : Nat } (z : A) (op : A -> A -> A) (v : Vec A n) : A \elim n
+    | 0 => z
+    | suc n => op (Head v) (reduce z op (Tail v))
+
+-- z ─ нейтральный элемент по сложению.
+\func matMul {A : \Type} (z : A) (add mul : A -> A -> A) (n m k : Nat) (M : Mat A n m) (N : Mat A m k) : Mat A n k \elim n
+    | 0 => fnil
+    | suc n => \let
+        | rest => matMul z add mul n m k (Tail M) N
+        | MRow => Head M
+        | NT => transpose N
+        | newRow => map (\lam row => reduce z add (zipWith mul MRow row)) NT
+        | zeroes => replicate z k
+        \in fcons newRow rest
+
+\func A : Mat Nat 2 3 =>
+    fcons
+        (fcons 1 (fcons 2 (fcons 3 fnil)))
+    (fcons
+        (fcons 4 (fcons 5 (fcons 6 fnil)))
+    fnil)
+
+\func B : Mat Nat 3 4 =>
+    fcons
+        (fcons 1 (fcons 2 (fcons 3 (fcons 4 fnil))))
+    (fcons
+        (fcons 5 (fcons 6 (fcons 7 (fcons 8 fnil))))
+    (fcons
+        (fcons 9 (fcons 10 (fcons 11 (fcons 12 fnil))))
+    fnil))
+
+-- https://www.wolframalpha.com/input/?i=%7B%7B1,2,3%7D,+%7B4,5,6%7D%7D+*+%7B%7B1,2,3,4%7D,+%7B5,6,+7,8%7D,+%7B9,10,11,12%7D%7D
+\func A*B : Mat Nat 2 4 =>
+    fcons
+        (fcons 38 (fcons 44 (fcons 50 (fcons 56 fnil))))
+    (fcons
+        (fcons 83 (fcons 98 (fcons 113 (fcons 128 fnil))))
+    fnil)
+
+
+\func testMul : (matMul 0 (Nat.+) (Nat.*) 2 3 4 A B) = A*B => idp -- BOY IT WORKS
+
+-- 10. Определите тип CTree A n бинарных деревьев высоты ровно n, которые хранят элементы только во внутренних узлах, но не в листьях.
+--     Высота листа равна 0.
+--     Любое такое бинарное дерево будет полным.
+
+\data CTree (A : \Type) (n : Nat) \elim n
+    | 0 => CLeaf
+    | suc n => CNode A (CTree A n) (CTree A n)
+
+
+-- 11. Определите тип Tree A n бинарных деревьев высоты не больше n, которые хранят элементы только во внутренних узлах, но не в листьях.
+--     Высота листа равна 0.
+
+\data Tree (A : \Type) (n : Nat) \elim n
+    | suc n => Node A (Tree A n) (Tree A n)
+    | _ => Leaf
+
+-- определите функцию, возвращающую высоту дерева.
+
+\func fmax {n : Nat} (a b : Fin n) : Fin n \elim n, a, b
+    | suc n, fzero, b => b
+    | suc n, a, fzero => a
+    | suc n, fsuc a, fsuc b => fsuc (fmax a b)
+
+\func height {A : \Type} (n : Nat) (t : Tree A n) : Fin (suc n) \elim n, t
+    | 0, _ => fzero
+    | _, Leaf => fzero
+    | suc n, Node _ l r => fsuc (fmax (height n l) (height n r))
