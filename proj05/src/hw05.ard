@@ -3,10 +3,31 @@
 
 -- 1. Докажите дистрибутивность умножения над сложением для натуральных чисел.
 
-\func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k => {?}
+\func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k \elim k
+    | 0 => idp
+    | suc k => pmap (\lam s => s + n) (ldistr n m k) *> +-assoc (n * m) (n * k) n
 
-\func rdistr (n m k : Nat) : (m + k) * n = m * n + k * n => {?}
-
+\func rdistr (n m k : Nat) : (m + k) * n = m * n + k * n \elim n
+    | 0 => idp
+    | suc n => (
+        (m + k) * suc n
+        ==< idp >==
+        (m + k) * n + (m + k)
+        ==< pmap (\lam s => s + (m + k)) (rdistr n m k) >==
+        (m * n + k * n) + (m + k)
+        ==< (+-assoc (m * n) (k * n) (m + k)) >==
+        (m * n) + ((k * n) + (m + k))
+        ==< pmap (\lam s => (m * n) + s) (sym (+-assoc (k * n) m k)) >==
+        (m * n) + ((k * n + m) + k)
+        ==< pmap (\lam s => (m * n) + (s + k)) (+-comm (k * n) m) >==
+        (m * n) + (m + (k * n) + k)
+        ==< pmap (\lam s => (m * n) + s) (+-assoc m (k * n) k) >==
+        (m * n) + (m + ((k * n) + k))
+        ==< sym (+-assoc (m * n) m (k * n + k)) >==
+        (m * n) + m + ((k * n) + k)
+        ==< idp >==
+        m * (suc n) + k * (suc n) `qed
+    )
 -- 2. Докажите, что reverse (reverse xs) = xs, где reverse определен через ++.
 
 \data List (A : \Type) | nil | cons A (List A)
