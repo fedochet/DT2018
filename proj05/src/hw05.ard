@@ -51,7 +51,11 @@
 
 -- 4. Докажите, что 0 не равно suc x.
 
-\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => {?}
+\data TT (n : Nat) \with
+    | suc n => tt
+
+\func absurd (t : TT 0) : Empty
+\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => absurd (transport TT (sym p) (tt))
 
 -- 5. Докажите, что fac не равен suc.
 
