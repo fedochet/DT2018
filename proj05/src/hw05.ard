@@ -71,7 +71,7 @@
 
 \func Jalt {A : \Type} (B : \Pi (a a' : A) -> a = a' -> \Type)
     (b : \Pi (a : A) -> B a a idp)
-    {a a' : A} (p : a = a') : B a a' p => {?}
+    {a a' : A} (p : a = a') : B a a' p => J (B a) (b a) p
 
 -- Выразите J через Jalt. Можно пользоваться только Jalt, idp и всем, что через них выражается.
 
