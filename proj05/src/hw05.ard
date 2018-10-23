@@ -62,7 +62,17 @@
     | cons x xs => reverse++ (reverse xs) (cons x nil) *> pmap (cons x) (reverse-isInvolutive xs)
 -- 3. Докажите, что vnil является нейтральным элементом для v++.
 
-\func vnil-rightId {A : \Type} {n : Nat} (xs : Vec A n) : transport (Vec A) (+-comm 0 n) (xs v++ vnil) = xs => {?}
+-- я не знаю, почему это работает :(
+\func vnil-rightId {A : \Type} {n : Nat} (xs : Vec A n) : transport (Vec A) (+-comm 0 n) (xs v++ vnil) = xs \elim n, xs
+    | 0, vnil => idp
+    | suc n, vcons x xs
+        => J (\lam e (p : 0 + n = e) =>
+            (transport (Vec A) (pmap suc p) (vcons x (xs v++ vnil))) =
+            vcons x (transport (Vec A) p (xs v++ vnil)))
+            idp
+            (+-comm 0 n)
+
+            *> pmap (vcons x) (vnil-rightId xs)
 
 -- 4. Докажите, что 0 не равно suc x.
 
