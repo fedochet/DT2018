@@ -1,30 +1,138 @@
 \import lect06
 
+\func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a)
+  => coe (\lam i => B (p @ i)) b right
+
+\func \infixr 5 *> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a''
+  => transport (\lam x => a = x) q p
+
+\func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') => path (\lam i => f (p @ i))
+
+\func sym {A : \Type} {a a' : A} (p : a = a') => transport (\lam x => x = a) p idp
+
 -- 1. Определите функцию swap при помощи \cowith, swap' при помощи паттерн матчинг и swap'' при помощи \new.
+\func swap {A B : \Type} (p : Pair A B) : Pair B A \cowith
+    | fst_ => p.snd_
+    | snd_ => p.fst_
 
-\func swap {A B : \Type} (p : Pair A B) : Pair B A => {?}
+\func swap' {A B : \Type} (p : Pair A B) : Pair B A \elim p
+    | (_, _, a, b) => \new Pair B A { | fst_ => b | snd_ => a }
 
-\func swap' {A B : \Type} (p : Pair A B) : Pair B A => {?}
-
-\func swap'' {A B : \Type} (p : Pair A B) : Pair B A => {?}
+\func swap'' {A B : \Type} (p : Pair A B) : Pair B A => \new Pair { | fst_ => p.snd_ | snd_ => p.fst_}
 
 -- 2. Докажите, что swap (swap p) = p.
 
-\func swap-involutive {A B : \Type} (p : Pair A B) : swap (swap p) = p => {?}
+\func swap-involutive {A B : \Type} (p : Pair A B) : swap (swap p) = p => idp
 
 -- 3. Докажите, что тип PosNat 0 пустой, а тип PosNat 1 нет.
 
 \data Empty
 
-\func zero-isNotPos (p : PosNat 0) : Empty => {?}
+\func absurd (t : T false) : Empty
+\func zero-isNotPos (p : PosNat 0) : Empty => absurd p.p
+--    | (suc n, p) => zero/=suc n ()
 
-\func one-isPos : PosNat 1 => {?}
+\func one-isPos : PosNat 1 \cowith
+  | p => tt
+
+\func if {A : \Type} (c : Bool) (t e : A) : A \elim c
+    | true => t
+    | false => e
+
+\func not (x : Bool) : Bool
+  | true => false
+  | false => true
+
+
+\func \infixl 6 - (x y : Nat) : Nat
+  | 0, _ => 0
+  | suc x, 0 => suc x
+  | suc x, suc y => x - y
+
+\func \infix 4 < (x y : Nat) : Bool
+  | 0, 0 => false
+  | 0, suc y => true
+  | suc x, 0 => false
+  | suc x, suc y => x < y
+
+\func mod (x y : Nat) : Nat => mod' x x y
+  \where \func mod' (f x y : Nat) : Nat \elim f
+    | 0 => 0
+    | suc f => if (not (x < y)) (mod' f (x - y) y) x
+
+-- copied from lect 3
+\func gcd (x y : Nat) : Nat => gcd' x x y
+  \where \func gcd' (s x y : Nat) : Nat \elim s, y
+    | 0, _ => 0
+    | _, 0 => x
+    | suc s, y => gcd' s y (mod x y)
+
+\instance NatEq : Eq Nat
+  | == => eq \where
+  \func eq (a b : Nat) : Bool \elim a, b
+    | 0, 0 => true
+    | 0, suc _ => false
+    | suc _, 0 => false
+    | suc a, suc b => eq a b
+
+
+\func isMutuallyPrime (a b : Nat) : Bool => gcd a b == 1
 
 -- 4. Определите \record, состоящий из пар взаимно простых натуральных чисел.
 --    Определите тип, состоящий из натуральных чисел, взаимно простых с 60.
 
+\record MutualyPrime (a b : Nat) (p : T (isMutuallyPrime a b))
+\record PrimeTo60 \extends MutualyPrime
+    | a => 60
+
 -- 5. Определите класс монад, который наследует класс функторов. Определите \instance этого класса для Maybe.
 
+\class Monad \extends Functor
+    | return {A : \Type} (a : A) : F A
+    | \infixl 2 >>= {A B : \Type} (m : F A) (f : A -> F B) : F B
+    | right-id {A : \Type} (m : F A) : (m >>= return) = m
+    | left-id {A : \Type} (a : A) (f : A -> F A)  : (return a >>= f) = f a
+    | bind-assoc {A B C : \Type} (m : F A) (f : A -> F B) (g : B -> F C)
+        : (m >>= f) >>= g = m >>= (\lam x => f x >>= g)
+
 \data Maybe (A : \Type) | nothing | just A
+
+\func maybe-fmap {A B : \Type} (f : A -> B) (m : Maybe A) : Maybe B \elim m
+    | nothing => nothing
+    | just a => just (f a)
+
+\func maybe-fmap-id {A : \Type} (m : Maybe A) : maybe-fmap (\lam (x : A) => x) m = m \elim m
+    | nothing => idp
+    | just a => idp
+
+\func maybe-fmap-comp {A B C : \Type} (f : A -> B) (g : B -> C) (y : Maybe A)
+    : maybe-fmap (\lam x => g (f x)) y = maybe-fmap g (maybe-fmap f y) \elim y
+    | nothing => idp
+    | just a => idp
+
+\func maybe-bind {A B : \Type} (m : Maybe A) (f : A -> Maybe B) : Maybe B \elim m
+    | nothing => nothing
+    | just a => f a
+
+\func maybe-right-id {A : \Type} (m : Maybe A) : (maybe-bind m just) = m \elim m
+    | nothing => idp
+    | just a => idp
+
+\func maybe-left-id {A : \Type} (a : A) (f : A -> Maybe A) : (maybe-bind (just a) f) = f a => idp
+
+\func maybe-bind-assoc {A B C : \Type} (m : Maybe A) (f : A -> Maybe B) (g : B -> Maybe C)
+       : maybe-bind (maybe-bind m f) g = maybe-bind m (\lam x => maybe-bind (f x) g) \elim m
+       | nothing => idp
+       | just a => idp
+
+\instance MaybeMonad : Monad Maybe
+  | fmap => maybe-fmap
+  | fmap-id => maybe-fmap-id
+  | fmap-comp => maybe-fmap-comp
+  | return => just
+  | >>= => maybe-bind
+  | right-id => maybe-right-id
+  | left-id => maybe-left-id
+  | bind-assoc => maybe-bind-assoc
 
 -- 6. Задание отменено.
