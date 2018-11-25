@@ -2,12 +2,102 @@
 
 -- 1. Определите функцию sscanf.
 
+\func UnFmt {lex : \Type} (format : List (Inst lex)) : \Type \elim format
+  | nil => \Sigma
+  | cons int xs => \Sigma Int (UnFmt xs)
+  | cons string xs => \Sigma (List lex) (UnFmt xs)
+  | cons (const (list)) xs => UnFmt xs
+
+--\func skip {lex : \Type} (str : List lex) (toSkip : List lex) : List lex \elim lex, toSkip
+--    |
+
+\data Maybe (A : \Type) | some A | empty
+
+\data Bool | true | false
+
+\func map {A B : \Type} (mapper : A -> B) (m : Maybe A) : Maybe B \elim m
+  | some a => some (mapper a)
+  | empty => empty
+
+\func splitUntil {lex : \Type} (p : lex -> Bool) (str : List lex) : \Sigma (List lex) (List lex) \elim str
+  | cons x xs => \case p x \with {
+    | true => (nil, xs)
+    | false => \case splitUntil p xs \with { -- how to do this better?
+      | (front, rest) => (cons x front, rest)
+    }
+  }
+  | nil => (nil, nil)
+
+\func removePrefix {lex : \Type} (equal : lex -> lex -> Bool) (prefix str : List lex) : Maybe (List lex)
+\elim prefix, str
+  | nil, str => some str
+  | cons _ _, nil => empty
+  | cons px prefix', cons sx str' => \case equal px sx \with {
+    | true => removePrefix equal prefix' str'
+    | false => empty
+  }
+
+\func sscanf {lex : \Type}
+             (isNewline : lex -> Bool)
+             (equals : lex -> lex -> Bool)
+             (readInt : lex -> Maybe Int)
+             (str : List lex)
+             (format : List (Inst lex)) : Maybe (UnFmt format) \elim str, format
+  |  _, nil => some ()      -- empty pattern
+  | nil, cons _ _ => empty  -- empty string
+  | cons s str', cons int format' => \case (readInt s) \with {
+    | some i => map (\lam rest => (i, rest)) (sscanf isNewline equals readInt str' format')
+    | empty => empty
+  }
+
+  | str', cons string format' => \case splitUntil isNewline str' \with {
+    | (front, rest) => map (\lam rest' => (front, rest')) (sscanf isNewline equals readInt rest format')
+  }
+
+  | str', cons (const toMatch) format' => \case removePrefix equals toMatch str' \with {
+    | empty => empty
+    | some rest => (sscanf isNewline equals readInt rest format')
+  }
+
 -- 2. Определите тип бинарных сортированных деревьев.
 --    То есть таких деревьев, в которых для любого узла верно, что все элементы в левом поддереве меньше либо равны, чем значение в узле, которое меньше либо равно, чем все элементы в правом поддереве.
+\data SearchTree (A : Poset) : \Type
+  | sleaf
+  | snode (elem : A) (left right : SearchTree A) (l : NodeL left elem) (r : NodeR elem right)
+
+\data NodeL {A : Poset} (left : SearchTree A) (elem : A) : \Type \elim left
+  | sleaf => nilNL
+  | snode elem' _ _ _ _ => consNL (elem' <= elem)
+
+\data NodeR {A : Poset} (elem : A) (right : SearchTree A) : \Type \elim right
+  | sleaf => nilNR
+  | snode elem' _ _ _ _ => consNR (elem <= elem')
 
 -- 3. Реализуйте функцию сортировки, возвращающую SortedList.
 
-\func sort {A : TotalPoset} (xs : List A) : SortedList A => {?}
+\func insert {A : TotalPoset} (x : A) (xs : SortedList A)
+  : \Sigma (rs : SortedList A) (\Pi (x' : A) -> (x' <= x) -> HeadL x' xs -> HeadL x' rs) \elim xs
+  | snil => (scons x snil nilL, \lam _ p _ => consL p)
+  | scons x' xs' p => \case totality x x' \with {
+      | inl x<=x' => (scons x (scons x' xs' p) (consL x<=x'), (\lam _ p' _ => consL p'))
+      | inr x'<=x => \case insert x xs' \with {
+        | (rs, pr) => (scons x' rs (pr x' x'<=x p), \lam x'' p'' h => \case h \with {
+          | consL p''' => pr x'' p'' (consL (trans p''' p))
+        })
+      }
+  }
+--  | scons x (scons x' xs p') p => \case totality x x \with {
+--      | inl elem<=x => scons x (scons x (scons x' xs p') p) (consL (elem<=x))
+--      | inr x<=elem =>
+--  }
+--  | scons x xs p => \case totality elem x \with {
+--    | inl elem<=x => scons elem (scons x xs p) (consL (elem<=x))
+--    | inr x<=elem => {?}
+--  }
+
+\func sort {A : TotalPoset} (xs : List A) : SortedList A \elim xs
+  | nil => snil
+  | cons x xs => insert x (sort xs)
 
 -- 4. Реализуйте функцию filter и докажите ее корректность, то есть, что выполнены следующие условияЖ
 --    * filter p xs является подсписком xs
