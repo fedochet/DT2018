@@ -18,7 +18,7 @@
   | pos (suc x), pos y => inc (pos x + pos y)
   | pos 0, y => y
   | pos (suc x), neg (suc y) => pos x + neg y
-  | neg (suc x), y => neg x + inc y
+  | neg (suc x), y => neg x + inc y -- выглядит не очень правдоподобно
 
 \func \infixl 7 * (x y : Int) : Int
   | pos (suc x), y => pos x * y + y
@@ -58,7 +58,7 @@
 
 \func nbn (n : Nat) : BinNatToNat (NatToBinNat n) = n \elim n
   | 0 => idp
-  | suc n => nbn n
+  | suc n => nbn n -- эээ, это же не работает
 
 \func bnb (b : BinNat) : NatToBinNat (BinNatToNat b) = b => {?}
 
@@ -107,7 +107,7 @@
 
 -- 8. Определите множество конечных подмножеств множества A, то есть списков элементов A с точностью до перестановок и повторений элементов.
 
-\func Set (A : \Set) : \Set => A
+\func Set (A : \Set) : \Set => A -- это решение? Не очень похоже на правду.
 
 -- 9. Докажите, что функция является биекцией тогда и только тогда, когда она является инъекцией и сюръекцией.
 
