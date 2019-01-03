@@ -14,11 +14,16 @@
   | pos x => pos (suc x)
   | neg (suc x) => neg x
 
+\func dec (x : Int) : Int \elim x
+  | pos (suc x) => pos x
+  | pos 0 => neg 1
+  | neg x => neg (suc x)
+
 \func \infixl 6 + (x y : Int) : Int
   | pos (suc x), pos y => inc (pos x + pos y)
   | pos 0, y => y
   | pos (suc x), neg (suc y) => pos x + neg y
-  | neg (suc x), y => neg x + inc y -- выглядит не очень правдоподобно
+  | neg (suc x), y => neg x + dec y -- выглядит не очень правдоподобно
 
 \func \infixl 7 * (x y : Int) : Int
   | pos (suc x), y => pos x * y + y
