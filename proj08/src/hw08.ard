@@ -15,9 +15,91 @@
 
 \data List (A : \Type) | nil | cons A (List A)
 
-\data In {A : \Type} (a : A) (xs : List A)
+\data In {A : \Type} (a : A) (xs : List A) \elim xs
+  | cons x xs => in (x = a)
+  | cons x xs => in-rec (In a xs)
 
 -- 3. Докажите эквивалентность пяти различных определений LessOrEq: lessOrEq, LessOrEq, LessOrEq', LessOrEq'' и LessOrEq'''.
+
+-- lib
+
+\func absurd {A : \Type} (e : Empty) : A
+
+\func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' =>
+  coe (\lam i => B (p @ i)) b right
+
+\func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') => path (\lam i => f (p @ i))
+
+\data TT (n : Nat) \with
+  | suc n => tt
+
+\func sym {A : \Type} {a a' : A} (p : a = a') : a' = a
+  => transport (\lam x => x = a) p idp
+
+\func trans {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a''
+  => transport (\lam x => a = x) q p
+
+\func suc/=0 {n : Nat} (p : suc n = 0) : Empty => transport (\lam n => \case n \with { | 0 => Empty | suc _ => Unit }) p unit
+\func suc/=0' {n : Nat} (p : 0 = suc n) : Empty => suc/=0 (sym p)
+
+\func idp {A : \Type} {a : A} => path (\lam _ => a)
+
+\func pred (n : Nat) : Nat
+  | 0 => 0
+  | suc n => n
+
+-- lib
+
+\func -1to2 {n m : Nat} (from : lessOrEq n m) : LessOrEq n m \elim n, m
+  | 0, _ => z<=n
+  | suc _, 0 => absurd from
+  | suc n, suc m => s<=s (-1to2 from)
+
+\func -2to3 {n m : Nat} (from : LessOrEq n m) : LessOrEq' n m \elim n, m, from
+  | 0, _, _ => z<=n' idp
+  | suc n', suc m', s<=s n<=m => s<=s' idp idp (-2to3 n<=m)
+
+\func -3to1 {n m : Nat} (from : LessOrEq' n m) : lessOrEq n m \elim n, m, from
+  | 0, _, _ => unit
+  | suc n, suc m, s<=s' p1 p2 eq => trans-lessOrEq (-3to1 eq) (sym p1) (sym p2)
+  | suc n, 0, s<=s' _ p2 _ => absurd (suc/=0 (sym p2))
+  | suc n, _, z<=n' p => absurd (suc/=0 p)
+
+\func trans-lessOrEq {n m n' m' : Nat} (from : lessOrEq n m) (p1 : n = n') (p2 : m = m') : lessOrEq n' m'
+  \elim n, m, n', m'
+    | 0, _, 0, _ => unit
+    | suc n, suc m, suc n', suc m' => trans-lessOrEq from (pmap pred p1) (pmap pred p2)
+    | suc n, _, 0, _ => absurd (suc/=0 p1)
+    | 0, _, suc n', _ => absurd (suc/=0 (sym p1))
+    | _, suc m, _, 0 => absurd (suc/=0 p2)
+
+\func -2to4 {n m : Nat} (from : LessOrEq n m) : LessOrEq'' n m \elim n, m, from
+  | 0, 0, _ => <=-refl idp
+  | 0, suc m, _ => <=-step (-2to4 z<=n)
+  | suc n, suc m, s<=s prev => sucLessOrEq'' (-2to4 prev)
+
+\func sucLessOrEq'' {n m : Nat} (eq : LessOrEq'' n m) : LessOrEq'' (suc n) (suc m) \elim m, eq
+  | suc m, <=-step p => <=-step (sucLessOrEq'' p)
+  | m, <=-refl p => <=-refl (pmap suc p)
+
+\func zero+n=n (n : Nat) : 0 Nat.+ n = n \elim n
+  | 0 => idp
+  | suc n => pmap suc (zero+n=n n)
+
+\func suc-trans (a b : Nat) : suc (a Nat.+ b) = (suc a) Nat.+ b \elim b
+  | 0 => idp
+  | suc b => pmap suc (suc-trans a b)
+
+\func -4to5 {n m : Nat} (eq : LessOrEq'' n m) : LessOrEq''' n m \elim m, eq
+  | m, <=-refl eq => (0, trans (zero+n=n n) eq)
+  | suc m', <=-step (other) => \case (-4to5 other) \with {
+    | (k', eq') => (suc k', trans (sym (suc-trans k' n)) (pmap suc eq'))
+  }
+
+\func -5to1 {n m : Nat} (eq : LessOrEq''' n m) : lessOrEq n m \elim n, m, eq
+  | 0, _, _ => unit
+  | suc n, suc m, (k, p) => -5to1 (k, pmap pred p)
+  | suc n, 0, (_, p) => suc/=0 p
 
 -- 4. Определите рефлексивное транзитивное замыкание отношения.
 --    То есть ReflTransClosure R -- это минимальное рефлексивное и транзитивное отношение, содержащее R.
@@ -32,4 +114,34 @@
 
 -- 6. Определите предикат xs <= ys на списках, означающий "список xs является подсписком ys".
 
+\data Sublist {A : \Type} (xs ys : List A) \elim xs, ys
+  | nil, _ => sublist-nil
+  | cons x xs, cons y ys => {
+    | sublist-skip (Sublist (cons x xs) ys)
+    | sublist-cons (x = y) (Sublist xs ys)
+  }
+
+\func \infixl 6 <= {A : \Type} (xs ys : List A) => Sublist xs ys
+
 -- 7. Докажите, что filter xs <= xs для любого списка xs.
+\data Bool | true | false
+\func filter {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+  | nil => nil
+  | cons x xs => \case p x \with {
+    | true => cons x (filter p xs)
+    | false => filter p xs
+  }
+
+\func <=-cons {A : \Type} {xs ys : List A} (p : xs <= ys) (y' : A) : xs <= (cons y' ys) \elim xs, ys, p
+  | cons x xs, cons y ys, p => sublist-skip p
+  | nil, ys, sublist-nil => sublist-nil
+
+\func filter-returns-sublist {A : \Type} (p : A -> Bool) (xs : List A) : (filter p xs) <= xs \elim xs
+  | nil => sublist-nil
+  | cons x xs => \case p x \as b \return (\case b \with {
+    | true => cons  x (filter p xs)
+    | false => filter {A} p xs
+  }) <= (cons x xs) \with {
+    | true => sublist-cons idp (filter-returns-sublist p xs)
+    | false => <=-cons (filter-returns-sublist p xs) x
+  }

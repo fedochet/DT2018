@@ -122,7 +122,22 @@
 
 -- 7. Докажите, что функции FromBoolToDec и FromDecToBool взаимно обратны.
 
-\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p => {?}
+\func funExt {A : \Type} (B : A -> \Type) {f g : \Pi (a : A) -> B a}
+             (p : \Pi (a : A) -> f a = g a) : f = g
+  => path (\lam i => \lam a => p a @ i)
+
+\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p
+  => funExt (\lam _ => Bool) (\lam a => \case p a \as pa \return ((\case \case pa \as pa' \return Decide (T pa') \with {
+    | true => yes {T true} tt
+    | false => no {T false} (\lam (t : T false) => T-absurd t)
+  } \with {
+    | yes _ => true
+    | no _ => false
+  }) = pa) \with {
+    | true => idp
+    | false => idp
+  })
+
 
 -- Мы не можем доказать, что FromBoolToDec (FromDecToBool P) = P, но мы можем доказать более слабое утверждение: эти предикаты логически эквивалентны.
 -- Для этого введем эквивалентность предикатов.
