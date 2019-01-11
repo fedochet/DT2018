@@ -30,7 +30,6 @@
 
 \func lookup {A : \Type} {n : Nat} (xs : Vec A n) (i : Nat) (p : T (i < n)): A \elim  n, xs, i
     | 0, _, 0 => absurd p
-    | 0, _, _ => absurd p
     | suc _, fcons x _, 0 => x
     | suc _, fcons _ xs, suc i => lookup xs i p
 
