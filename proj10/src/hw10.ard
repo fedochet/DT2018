@@ -81,8 +81,8 @@
   | scons x' xs' p => \case totality x x' \with {
       | inl x<=x' => (scons x (scons x' xs' p) (consL x<=x'), (\lam _ p' _ => consL p'))
       | inr x'<=x => \case insert x xs' \with {
-        | (rs, pr) => (scons x' rs (pr x' x'<=x p), \lam x'' p'' h => \case h \with {
-          | consL p''' => pr x'' p'' (consL (trans p''' p))
+        | (rs, pr) => (scons x' rs (pr x' x'<=x p), \lam _ _ h => \case h \with {
+          | consL y<=x' => consL y<=x'
         })
       }
   }
@@ -97,7 +97,7 @@
 
 \func sort {A : TotalPoset} (xs : List A) : SortedList A \elim xs
   | nil => snil
-  | cons x xs => insert x (sort xs)
+  | cons x xs => (insert x (sort xs)).1
 
 -- 4. Реализуйте функцию filter и докажите ее корректность, то есть, что выполнены следующие условияЖ
 --    * filter p xs является подсписком xs
