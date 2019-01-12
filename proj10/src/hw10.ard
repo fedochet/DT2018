@@ -65,6 +65,7 @@
   | sleaf
   | snode (elem : A) (left right : SearchTree A) (l : NodeL left elem) (r : NodeR elem right)
 
+-- Неправильно. Здесь получается, что элемент >= значения в вершине левого поддерева, а нужно, чтобы он был >= каждого элемента в нем.
 \data NodeL {A : Poset} (left : SearchTree A) (elem : A) : \Type \elim left
   | sleaf => nilNL
   | snode elem' _ _ _ _ => consNL (elem' <= elem)
@@ -79,7 +80,7 @@
   : \Sigma (rs : SortedList A) (\Pi (x' : A) -> (x' <= x) -> HeadL x' xs -> HeadL x' rs) \elim xs
   | snil => (scons x snil nilL, \lam _ p _ => consL p)
   | scons x' xs' p => \case totality x x' \with {
-      | inl x<=x' => (scons x (scons x' xs' p) (consL x<=x'), (\lam _ p' _ => consL p'))
+      | inl x<=x' => (scons x (scons x' xs' p) (consL x<=x') {- это место не тайпчекается -}, (\lam _ p' _ => consL p'))
       | inr x'<=x => \case insert x xs' \with {
         | (rs, pr) => (scons x' rs (pr x' x'<=x p), \lam _ _ h => \case h \with {
           | consL y<=x' => consL y<=x'
