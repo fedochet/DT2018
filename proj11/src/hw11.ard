@@ -81,12 +81,37 @@
 -- Пояснение к этому доказательству будет дано позже.
 \func Nat-isSet : isSet Nat => \lam _ _ => Path.inProp
 
+\func absurdEmpty {A : \Type} (e : Empty) : A
+
+\func suc/=0 {n : Nat} (p : suc n = 0) : Empty => transport (\lam n => \case n \with { | 0 => Empty | suc _ => Unit }) p unit
+\func suc/=0' {n : Nat} (p : 0 = suc n) : Empty => suc/=0 (sym p)
+\func suc-n/=n {n : Nat} (p : n = suc n) : Empty \elim n
+  | 0 => suc/=0' p
+  | suc n => suc-n/=n (pmap pred p)
+
+
+\func pred (n : Nat) : Nat
+  | 0 => 0
+  | suc n => n
+
 \func LessOrEq'-isProp {n m : Nat} : isProp (LessOrEq' n m) => helper \where
   \func helper {n m : Nat} (p q : LessOrEq' n m) : (p = q) \elim n, m, p, q
     | _, suc m, <=-step p', <=-step q' => pmap <=-step (helper p' q')
     | n, m, <=-refl peq, <=-refl qeq => pmap <=-refl (equality-isProp Nat-isSet n m peq qeq)
-    | n, suc m, <=-step p', <=-refl q' => {?}
-    | n, suc m, <=-refl peq, <=-step _ => {?}
+    | n, suc m, <=-step p', <=-refl q' => absurdEmpty (contradiction q' p')
+    | n, suc m, <=-refl p', <=-step q' => absurdEmpty (contradiction p' q')
+
+\func contradiction {n m : Nat} (p : n = suc m) (p' : LessOrEq' n m) : Empty \elim n, m, p'
+  | _, 0, <=-refl p'' => suc/=0 (trans (sym p) p'')
+  | _, suc m', <=-refl p'' => suc-n/=n (sym (trans (sym p) p''))
+  | 0, suc m', <=-step p'' => suc/=0' p
+  | suc n', suc m', <=-step p'' => contradiction (pmap pred p) (LessOrEq'-n-step p'')
+
+\func LessOrEq'-n-step {n m : Nat} (p : LessOrEq' (suc n) m) : LessOrEq' n m \elim m, p
+  | 0, <=-refl p' => absurdEmpty (suc/=0 p')
+  | suc m', <=-refl p' => <=-step (<=-refl (pmap pred p'))
+  | suc m', <=-step prev => <=-step (LessOrEq'-n-step prev)
+
 -- 6. Докажте, что ReflClosure LessOrEq не является предикатом, а ReflClosure (\lam x y => T (x < y)) является.
 
 \func \infix 4 < (n m : Nat) : Bool
