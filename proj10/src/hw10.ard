@@ -76,6 +76,8 @@
   | snode _ _ r _ _ => treeMax r default
 
 -- Неправильно. Здесь получается, что элемент >= значения в вершине левого поддерева, а нужно, чтобы он был >= каждого элемента в нем.
+-- исправлено
+
 \data NodeL {A : Poset} (left : SearchTree A) (elem : A) : \Type \elim left
   | sleaf => nilNL
   | t => consNL (treeMax t elem <= elem) -- elem никогда не вернется, т.к. он default возвращается только при t = sleaf
@@ -86,25 +88,30 @@
 
 -- 3. Реализуйте функцию сортировки, возвращающую SortedList.
 
+-- > на моей машине всё тайпчекается :D
 \func insert {A : TotalPoset} (x : A) (xs : SortedList A)
   : \Sigma (rs : SortedList A) (\Pi (x' : A) -> (x' <= x) -> HeadL x' xs -> HeadL x' rs) \elim xs
   | snil => (scons x snil nilL, \lam _ p _ => consL p)
-  | scons x' xs' p => \case totality x x' \with {
-      | inl x<=x' => (scons x (scons x' xs' p) (consL x<=x') {- это место не тайпчекается -}, (\lam _ p' _ => consL p'))
-      | inr x'<=x => \case insert x xs' \with {
-        | (rs, pr) => (scons x' rs (pr x' x'<=x p), \lam _ _ h => \case h \with {
-          | consL y<=x' => consL y<=x'
-        })
-      }
+  | scons x' snil p => \case totality x x' \with {
+    | inl x<=x' => (scons x (scons x' snil nilL) (consL x<=x'), \lam _ p' _ => consL p')
+    | inr x'<=x => (scons x' (scons x snil nilL) (consL x'<=x), \lam _ _ h => \case h \with { consL p => consL p})
   }
---  | scons x (scons x' xs p') p => \case totality x x \with {
---      | inl elem<=x => scons x (scons x (scons x' xs p') p) (consL (elem<=x))
---      | inr x<=elem =>
---  }
---  | scons x xs p => \case totality elem x \with {
---    | inl elem<=x => scons elem (scons x xs p) (consL (elem<=x))
---    | inr x<=elem => {?}
---  }
+  | scons x' (scons y ys p') p => \case totality x x' \with {
+    | inl x<=x' => (scons x (scons x' (scons y ys p') p) (consL x<=x'), \lam _ p' _ => consL p')
+    | inr x'<=x => \let insertion => insert x (scons y ys p') \in \case insertion \with {
+      (xs', pr) => (scons x' xs' (pr x' x'<=x p), \lam _ _ h => \case h \with { consL p => consL p})
+    }
+  }
+
+-- старый вариант
+----  | scons x' xs' p => \case totality x x' \with {
+----      | inl x<=x' => (scons x (scons x' xs' p) (consL x<=x') {- это место не тайпчекается -}, (\lam _ p' _ => consL p'))
+----      | inr x'<=x => \case insert x xs' \with {
+----        | (rs, pr) => (scons x' rs (pr x' x'<=x p), \lam _ _ h => \case h \with {
+----          | consL y<=x' => consL y<=x'
+----        })
+----      }
+-- }
 
 \func sort {A : TotalPoset} (xs : List A) : SortedList A \elim xs
   | nil => snil
