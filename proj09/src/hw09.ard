@@ -1,8 +1,20 @@
 \import lect09
+\open Nat
 
 -- 1. Определите факториал через Nat-rec.
 
+\func fac (n : Nat) : Nat => Nat-rec 1 (\lam cur acc => (suc cur) * acc) n
+
 -- 2. Докажите ассоциативность сложения для натуральных чисел через Nat-elim.
+
+\func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' => path (\lam i => f (p @ i))
+
+--\func +-assoc (x y z : Nat) : (x + y) + z = x + (y + z) \elim z
+--  | zero => idp
+--  | suc z => pmap suc (+-assoc x y z)
+
+\func +-assoc (x y z : Nat) : (x + y) + z = x + (y + z) =>
+  Nat-elim (\lam z => (x + y) + z = x + (y + z)) idp (\lam n eq => pmap suc eq) z
 
 -- 3. Определите через Nat-<-ind либо div, либо toDivDom.
 
@@ -12,9 +24,34 @@
 
 -- 4. Определите элиминатор для D.
 
+\func D-elim (E : D -> \Type)
+             (c1 : \Pi (x : Nat) -> E (con1 x))
+             (c2 : \Pi (f : D) -> (E f) -> \Pi (s : D) -> (E s) -> (E (con2 f s)))
+             (c3 : \Pi (f : Nat -> D) -> (\Pi (x : Nat) -> E (f x)) -> E (con3 f))
+             (d : D) : E d
+  --             (c3 : (Nat -> D) -> (Nat -> E) -> E)
+\elim d {
+  | con1 x => c1 x
+  | con2 f s => c2 f (D-elim E c1 c2 c3 f) s (D-elim E c1 c2 c3 s)
+  | con3 f => c3 f (\lam n => D-elim E c1 c2 c3 (f n))
+}
+
 -- 5. Определите рекурсор и элиминатор для List.
+
+\func List-rec {E A : \Type} (z : A) (elim : E -> A -> A) (xs : List E) : A \elim xs
+  | nil => z
+  | cons x xs => elim x (List-rec z elim xs)
+
+\func List-elim {A : \Type}
+                (E : List A -> \Type)
+                (z : E nil)
+                (elim : \Pi (x : A) -> \Pi (xs : List A) -> E xs -> E (cons x xs))
+                (xs : List A) : E xs \elim xs
+  | nil => z
+  | cons x xs => elim x xs (List-elim E z elim xs)
 
 -- 6. Докажите принцип индукции для натуральных чисел, позволяющий использовать индукционную гипотезу для любого меньшего числа.
 --    Hint: Прежде, чем доказывать утверждение по индукции, его можно обобщить.
 
-\func Nat-<-ind (P : Nat -> \Type) (h : \Pi (n : Nat) -> (\Pi (k : Nat) -> T (k < n) -> P k) -> P n) (n : Nat) : P n => {?}
+\func Nat-<-ind (P : Nat -> \Type) (h : \Pi (n : Nat) -> (\Pi (k : Nat) -> T (k < n) -> P k) -> P n) (n : Nat) : P n =>
+  {?}
