@@ -65,14 +65,24 @@
   | sleaf
   | snode (elem : A) (left right : SearchTree A) (l : NodeL left elem) (r : NodeR elem right)
 
+\func treeMin {A : Poset} (tree : SearchTree A) (default : A) : A \elim tree
+  | sleaf => default
+  | snode elem sleaf _ _ _ => elem
+  | snode _ l _ _ _ => treeMin l default
+
+\func treeMax {A : Poset} (tree : SearchTree A) (default : A) : A \elim tree
+  | sleaf => default
+  | snode elem _ sleaf _ _ => elem
+  | snode _ _ r _ _ => treeMax r default
+
 -- Неправильно. Здесь получается, что элемент >= значения в вершине левого поддерева, а нужно, чтобы он был >= каждого элемента в нем.
 \data NodeL {A : Poset} (left : SearchTree A) (elem : A) : \Type \elim left
   | sleaf => nilNL
-  | snode elem' _ _ _ _ => consNL (elem' <= elem)
+  | t => consNL (treeMax t elem <= elem) -- elem никогда не вернется, т.к. он default возвращается только при t = sleaf
 
 \data NodeR {A : Poset} (elem : A) (right : SearchTree A) : \Type \elim right
   | sleaf => nilNR
-  | snode elem' _ _ _ _ => consNR (elem <= elem')
+  | t => consNR (elem <= treeMin t elem)
 
 -- 3. Реализуйте функцию сортировки, возвращающую SortedList.
 
